@@ -1,5 +1,3 @@
-import java.util.Arrays;
-
 public class DES {
     private static final byte[] IP = {
             58, 50, 42, 34, 26, 18, 10, 2,
@@ -213,7 +211,7 @@ public class DES {
         return subkeys;
     }
 
-    public static long encryptBlock(long m, /* 64 bits */ long key) {
+    public static long encryptBlock(long m, long key) {
 
         long subkeys[] = createSubkeys(key);
 
@@ -232,129 +230,10 @@ public class DES {
         return FP(rl);
     }
 
-    public static void encryptBlock(
-            byte[] message,
-            int messageOffset,
-            byte[] ciphertext,
-            int ciphertextOffset,
-            byte[] key
-    ) {
-        long m = getLongFromBytes(message, messageOffset);
-        long k = getLongFromBytes(key, 0);
-        long c = encryptBlock(m, k);
-        getBytesFromLong(ciphertext, ciphertextOffset, c);
-    }
-
-    public static byte[] encrypt(byte[] message, byte[] key) {
-        byte[] ciphertext = new byte[message.length];
-
-        for (int i = 0; i < message.length; i += 8) {
-            encryptBlock(message, i, ciphertext, i, key);
-        }
-
-        return ciphertext;
-    }
-
-    public static byte[] encrypt(byte[] challenge, String password) {
-        return encrypt(challenge, passwordToKey(password));
-    }
-
-    private static byte[] passwordToKey(String password) {
-        byte[] pwbytes = password.getBytes();
-        byte[] key = new byte[8];
-        for (int i = 0; i < 8; i++) {
-            if (i < pwbytes.length) {
-                byte b = pwbytes[i];
-                byte b2 = 0;
-                for (int j = 0; j < 8; j++) {
-                    b2 <<= 1;
-                    b2 |= (b & 0x01);
-                    b >>>= 1;
-                }
-                key[i] = b2;
-            } else {
-                key[i] = 0;
-            }
-        }
-        return key;
-    }
-
-
-    private static int charToNibble(char c) {
-        if (c >= '0' && c <= '9') {
-            return (c - '0');
-        } else if (c >= 'a' && c <= 'f') {
-            return (10 + c - 'a');
-        } else if (c >= 'A' && c <= 'F') {
-            return (10 + c - 'A');
-        } else {
-            return 0;
-        }
-    }
-
-    private static byte[] parseBytes(String s) {
-        s = s.replace(" ", "");
-        byte[] ba = new byte[s.length() / 2];
-        if (s.length() % 2 > 0) {
-            s = s + '0';
-        }
-        for (int i = 0; i < s.length(); i += 2) {
-            ba[i / 2] = (byte) (charToNibble(s.charAt(i)) << 4 | charToNibble(s.charAt(i + 1)));
-        }
-        return ba;
-    }
-
-    private static String hex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < bytes.length; i++) {
-            sb.append(String.format("%02X ", bytes[i]));
-        }
-        return sb.toString();
-    }
-
-    public static boolean test(byte[] message, byte[] expected, String password) {
-        return test(message, expected, passwordToKey(password));
-    }
-
-    private static int testCount = 0;
-
-    public static boolean test(byte[] message, byte[] expected, byte[] key) {
-        System.out.println("Test #" + (++testCount) + ":");
-        System.out.println("\tmessage:  " + hex(message));
-        System.out.println("\tkey:      " + hex(key));
-        System.out.println("\texpected: " + hex(expected));
-        byte[] received = encrypt(message, key);
-        System.out.println("\treceived: " + hex(received));
-        boolean result = Arrays.equals(expected, received);
-        System.out.println("\tverdict: " + (result ? "PASS" : "FAIL"));
-        return result;
-    }
-    public static String convertStringToHex(String str){
-
-        char[] chars = str.toCharArray();
-
-        StringBuffer hex = new StringBuffer();
-        for(int i = 0; i < chars.length; i++){
-            hex.append(Integer.toHexString((int)chars[i]));
-        }
-
-        return hex.toString();
-    }
-
-    private static long IV;
-
-    public static long getIv() {
-        return IV;
-    }
-
-    public static void setIv(long iv) {
-        IV = iv;
-    }
-
     public static byte[] encryptCBC(byte[] message, byte[] key) {
         byte[] ciphertext = new byte[message.length];
         long k = getLongFromBytes(key, 0);
-        long previousCipherBlock = IV;
+        long previousCipherBlock = Long.reverse(k);
 
         for (int i = 0; i < message.length; i += 8) {
             long messageBlock = getLongFromBytes(message, i);
@@ -386,33 +265,10 @@ public class DES {
         return FP(rl);
     }
 
-    public static void decryptBlock(
-            byte[] ciphertext,
-            int ciphertextOffset,
-            byte[] message,
-            int messageOffset,
-            byte[] key
-    ) {
-        long c = getLongFromBytes(ciphertext, ciphertextOffset);
-        long k = getLongFromBytes(key, 0);
-        long m = decryptBlock(c, k);
-        getBytesFromLong(message, messageOffset, m);
-    }
-
-    public static byte[] decrypt(byte[] ciphertext, byte[] key) {
-        byte[] message = new byte[ciphertext.length];
-
-        for (int i = 0; i < ciphertext.length; i += 8) {
-            decryptBlock(ciphertext, i, message, i, key);
-        }
-
-        return message;
-    }
-
     public static byte[] decryptCBC(byte[] ciphertext, byte[] key) {
         byte[] message = new byte[ciphertext.length];
         long k = getLongFromBytes(key, 0);
-        long previousCipherBlock = IV;
+        long previousCipherBlock = Long.reverse(k);
 
         for (int i = 0; i < ciphertext.length; i += 8) {
             long cipherBlock = getLongFromBytes(ciphertext, i);
